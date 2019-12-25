@@ -15,7 +15,15 @@ if __name__ == '__main__':
     openner = request.build_opener(handler)
     openner.open(host)
     # 获取cookie
-    # print(cookie)
+
+    login_data={}
+    with open("user.cfg",'r') as f:
+        for line in f:
+            items = line.split(":")
+            items[1]=items[1].replace('\n','').replace('\r','')
+            login_data[items[0]]=items[1]
+    login_data['retrunURL']="null"
+    print(login_data)
 
     s = requests.session()  # 确保申请验证码的session和登陆时为一致的，所以写在了这里
     now_time = str(int(time.time()))
@@ -31,32 +39,25 @@ if __name__ == '__main__':
     # img=img.convert('L')
     # vcode = pytesseract.image_to_string(img)  # 使用ocr技术将图片中的验证码读取出来
     # time.sleep(0.3) 
-
     # print(vcode)
+
     print("请输入验证码(Please enter the ValidateCode)")
     vcode=input()
-    os.remove(filename)
-    login_data={}
-    login_data['userName']="161290019"
-    login_data['password']="Wyx199812"
-    login_data['retrunURL']="null"
+    os.remove(filename) #输入完验证码后自动删除本地图片   
     login_data['ValidateCode']=vcode
+    print(login_data)
+    #发送登录请求
     response = s.post(host+"login.do",login_data)
-    HomePage = response.content
-    HomePage.decode('utf-8')
-    # print(response.content.decode('utf-8'))
-    with open("jw.html",'w') as f:
-        f.write(str(response.content.decode('utf-8')))
 
     login_success=False
     if response.content.__len__() > 1100:
         login_success=True
-        print("Login success!")
+        print("登陆成功!")
     else:
-        print("Login failed")
+        print("登录失败，请检查账号密码及验证码")
         login_success=False
-    
-    # r1 = s.get(host+"student/elective/specialityCourseList.do")
+        exit()
+
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
