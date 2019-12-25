@@ -62,7 +62,8 @@ def GetCourseList():
     courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
     # print(courseList.content.decode('utf-8'))
 
-def GrabCourse(courseID):
+#接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
+def GrabCourse(courseID,interval=0):
     while(True):
         selectCourse_reqdata={}
         selectCourse_reqdata['method']="addSpecialitySelect"
@@ -81,6 +82,8 @@ def GrabCourse(courseID):
                     print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
+        if interval!=0:
+            time.sleep(interval)
         # print(selectResult.content.decode('utf-8'))
 
 if __name__ == '__main__':
@@ -89,5 +92,5 @@ if __name__ == '__main__':
         exit()
 
     GetCourseList()
-    GrabCourse(92438)
+    GrabCourse(92438,0)
     
