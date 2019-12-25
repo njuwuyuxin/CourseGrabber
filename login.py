@@ -53,21 +53,41 @@ def login(session):
         print("登录失败，请检查账号密码及验证码")
         return False
 
-if __name__ == '__main__':
-    s = requests.session()  # 确保申请验证码的session和登陆时为一致的，所以写在了这里
-    if not login(s):
-        exit()
-
+def GetCourseList():
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
     courseList_reqdata['specialityCode']="221"
     courseList_reqdata['courseGrade']="2017"
     courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
-    print(courseList.content.decode('utf-8'))
+    # print(courseList.content.decode('utf-8'))
 
-    selectCourse_reqdata={}
-    selectCourse_reqdata['method']="addSpecialitySelect"
-    selectCourse_reqdata['classId']="92454"
-    selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
-    print(selectResult.content.decode('utf-8'))
+def GrabCourse(courseID):
+    while(True):
+        selectCourse_reqdata={}
+        selectCourse_reqdata['method']="addSpecialitySelect"
+        selectCourse_reqdata['classId']=str(courseID)
+        selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
+        soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
+        for tag in soup.find_all('div'):
+            if tag.get('id')=="successMsg":
+                print("抢课成功！")
+                return
+            elif tag.get('id')=="errMsg":
+                if tag.string.find("已经")!=-1:
+                    print("您已经抢到该课程啦~")
+                    exit()
+                else:
+                    print("当前班级已满，仍在为您持续抢课")
+            else:
+                pass
+        # print(selectResult.content.decode('utf-8'))
+
+if __name__ == '__main__':
+    s = requests.session()  # 确保申请验证码的session和登陆时为一致的，所以写在了这里
+    if not login(s):
+        exit()
+
+    GetCourseList()
+    GrabCourse(92438)
+    
