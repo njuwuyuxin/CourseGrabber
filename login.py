@@ -4,6 +4,7 @@ from http import cookiejar
 import time
 from PIL import Image
 import os
+from bs4 import BeautifulSoup
 
 
 if __name__ == '__main__':
@@ -43,17 +44,29 @@ if __name__ == '__main__':
     response = s.post(host+"login.do",login_data)
     HomePage = response.content
     HomePage.decode('utf-8')
-    print(response.content.decode('utf-8'))
+    # print(response.content.decode('utf-8'))
     with open("jw.html",'w') as f:
         f.write(str(response.content.decode('utf-8')))
+
+    login_success=False
     if response.content.__len__() > 1100:
+        login_success=True
         print("Login success!")
     else:
         print("Login failed")
+        login_success=False
+    
+    # r1 = s.get(host+"student/elective/specialityCourseList.do")
+    #构造拉取课程信息的请求体
+    courseList_reqdata={}
+    courseList_reqdata['method']="specialityCourseList"
+    courseList_reqdata['specialityCode']="221"
+    courseList_reqdata['courseGrade']="2017"
+    courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
+    print(courseList.content.decode('utf-8'))
 
-    # vcode_list = confirm_vcode(vcode)  # 检验验证码有效性，并输出更好的验证码队列
-
-
-
-    # response = requests.get("http://elite.nju.edu.cn/jiaowu/ValidateCode.jsp")
-    # print(response.text.encode('GBK','ignore'))
+    selectCourse_reqdata={}
+    selectCourse_reqdata['method']="addSpecialitySelect"
+    selectCourse_reqdata['classId']="92454"
+    selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
+    print(selectResult.content.decode('utf-8'))
