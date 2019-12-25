@@ -3,6 +3,7 @@ from urllib import request
 from http import cookiejar
 import time
 from PIL import Image
+import os
 
 
 if __name__ == '__main__':
@@ -33,17 +34,18 @@ if __name__ == '__main__':
     # print(vcode)
     print("请输入验证码(Please enter the ValidateCode)")
     vcode=input()
+    os.remove(filename)
     login_data={}
     login_data['userName']="161290019"
     login_data['password']="Wyx199812"
     login_data['retrunURL']="null"
     login_data['ValidateCode']=vcode
     response = s.post(host+"login.do",login_data)
-    HomePage = str(response.content)
-    HomePage.encode('utf-8')
+    HomePage = response.content
+    HomePage.decode('utf-8')
+    print(response.content.decode('utf-8'))
     with open("jw.html",'w') as f:
-        f.write(HomePage)
-    print(response)
+        f.write(str(response.content.decode('utf-8')))
     if response.content.__len__() > 1100:
         print("Login success!")
     else:
