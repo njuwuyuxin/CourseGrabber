@@ -100,5 +100,6 @@ if __name__ == '__main__':
         exit()
 
     GetCourseList()
-    GrabCourse(92438,0)
-    
+    print("请输入需要抢课的课程ID")
+    courseID = input()
+    GrabCourse(courseID,0)
