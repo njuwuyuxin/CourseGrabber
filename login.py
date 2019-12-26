@@ -17,13 +17,21 @@ def login(session):
 
     #构造登陆请求体
     login_data={}
-    with open("user.cfg",'r') as f:
-        for line in f:
-            items = line.split(":")
-            items[1]=items[1].replace('\n','').replace('\r','')
-            login_data[items[0]]=items[1]
+    files = os.listdir()
+    # print(files)
+    if "user.cfg" in files:
+        with open("user.cfg",'r') as f:
+            for line in f:
+                items = line.split(":")
+                items[1]=items[1].replace('\n','').replace('\r','')
+                login_data[items[0]]=items[1]
+    else:
+        print("请输入用户名")
+        login_data['userName']=input()
+        print("请输入密码")
+        login_data['password']=input()
     login_data['retrunURL']="null"
-    print(login_data)
+    # print(login_data)
 
     # 取得验证码图片
     now_time = str(int(time.time()))
