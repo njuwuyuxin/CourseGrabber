@@ -85,6 +85,8 @@ def GetCookie(session):
     return cookie
 
 def GetCourseList():
+    #返回的课程列表，存储课程编号对应的courseID
+    courseIdList=[]
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
@@ -93,12 +95,28 @@ def GetCourseList():
     grade = input()
     courseList_reqdata['courseGrade']=grade
     courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
-    page = courseList.content.decode('utf-8')
     soup = BeautifulSoup(courseList.content,"html.parser",from_encoding='utf-8')
-    # for tr in soup.find_all('tr'):
-    #     if(tr.get('class')=="TABLE_TR_01"):
-    #         print(tr)
-    # print(page)
+    trs = soup.find_all('tr',{'class':'TABLE_TR_01'})
+    print("序号\t课程号\t\t课程名\t\t\t学分\t学时\t类型\t开课院系")
+    for tr in trs:
+        tds = tr.find_all('td')
+        courseNo = tds[0].find('a').find('u').string
+        if(tds[1].string.__len__()<=7):
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[1].string+'\t\t'+tds[2].string+'\t'+tds[3].string+'\t'+tds[4].string+'\t'+tds[6].string)
+        else:
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[1].string+'\t'+tds[2].string+'\t'+tds[3].string+'\t'+tds[4].string+'\t'+tds[6].string)
+        click_td = tr.find('td',{'onclick':True})
+        if click_td==None:
+            courseIdList.append("")
+            pass
+        else:
+            # print(click_td['onclick'])
+            js = click_td['onclick']
+            args = js.split(',')
+            courseID = args[4][0:5]
+            courseIdList.append(courseID)
+    return courseIdList
+
 
 #接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
 def GrabCourse(courseID,interval=0):
@@ -118,7 +136,6 @@ def GrabCourse(courseID,interval=0):
                     print("您已经抢到该课程啦~")
                     exit()
                 else:
-                    print(tag.string)
                     print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
@@ -131,7 +148,14 @@ if __name__ == '__main__':
     if not login(s):
         exit()
 
-    GetCourseList()
-    print("请输入需要抢课的课程ID")
-    courseID = input()
-    GrabCourse(courseID,0)
+    courseIdList = GetCourseList()
+    print("请输入需要抢课的课程序号（非课程号）")
+    courseNo = input()
+    if int(courseNo)<=0 or int(courseNo)>courseIdList.__len__():
+        print("输入序号有误，请重新输入")
+    else:
+        courseID = courseIdList[int(courseNo)-1]
+        if courseID=="":
+            print("你已经选过该门课啦~换个课程吧")
+        else:
+            GrabCourse(courseID,0)
