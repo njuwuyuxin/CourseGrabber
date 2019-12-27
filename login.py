@@ -84,17 +84,22 @@ def GetCookie(session):
             cookie[item[0]] = item[1]
     return cookie
 
-def GetCourseList():
+def GetCourseList(session):
+    #获取专业选课页面，用以获得院系编号
+    selectPage = session.post(host+"student/elective/courseList.do",{'method':'specialityCourseList'})
+    selectPageSoup = BeautifulSoup(selectPage.content,"html.parser",from_encoding='utf-8')
+    majorID = selectPageSoup.find('select',{'id':'specialityList'}).find('option')['value']
+    
     #返回的课程列表，存储课程编号对应的courseID
     courseIdList=[]
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
-    courseList_reqdata['specialityCode']="221"      #猜测是专业代号，计科为221
+    courseList_reqdata['specialityCode']=majorID      #专业代号，计科为221
     print("请输入对应年级")
     grade = input()
     courseList_reqdata['courseGrade']=grade
-    courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
+    courseList = session.post(host+"student/elective/courseList.do",courseList_reqdata)
     soup = BeautifulSoup(courseList.content,"html.parser",from_encoding='utf-8')
     trs = soup.find_all('tr',{'class':'TABLE_TR_01'})
     print("序号\t课程号\t\t课程名\t\t\t学分\t学时\t类型\t开课院系")
@@ -125,7 +130,7 @@ def GrabCourse(courseID,interval=0):
         selectCourse_reqdata['method']="addSpecialitySelect"
         selectCourse_reqdata['classId']=str(courseID)
         selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
-        # print(selectResult.content.decode('utf-8'))
+        print(selectResult.content.decode('utf-8'))
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         for tag in soup.find_all('div'):
             if tag.get('id')=="successMsg":
@@ -136,19 +141,20 @@ def GrabCourse(courseID,interval=0):
                     print("您已经抢到该课程啦~")
                     exit()
                 else:
+                    print(tag.string)
                     print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
         if interval!=0:
             time.sleep(interval)
-        # print(selectResult.content.decode('utf-8'))
 
 if __name__ == '__main__':
     s = requests.session()
     if not login(s):
         exit()
 
-    courseIdList = GetCourseList()
+    courseIdList = GetCourseList(s)
+    # print(courseIdList)
     print("请输入需要抢课的课程序号（非课程号）")
     courseNo = input()
     if int(courseNo)<=0 or int(courseNo)>courseIdList.__len__():
@@ -158,4 +164,4 @@ if __name__ == '__main__':
         if courseID=="":
             print("你已经选过该门课啦~换个课程吧")
         else:
-            GrabCourse(courseID,0)
+            GrabCourse(courseID,1)
