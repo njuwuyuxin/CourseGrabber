@@ -3,6 +3,7 @@ from urllib import request
 from http import cookiejar
 import time
 from PIL import Image
+from io import BytesIO
 import os
 from bs4 import BeautifulSoup
 
@@ -37,6 +38,8 @@ def login(session):
     now_time = str(int(time.time()))
     pic_url = host + 'ValidateCode.jsp'
     pic = session.get(pic_url).content
+    im = Image.open(BytesIO(pic))
+    im.show()
     filename = '' + now_time + '.jpg'  
     with open(filename, 'wb') as f:
         f.write(pic)
@@ -65,10 +68,17 @@ def GetCourseList():
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
-    courseList_reqdata['specialityCode']="221"
-    courseList_reqdata['courseGrade']="2017"
+    courseList_reqdata['specialityCode']="221"      #猜测是专业代号，计科为221
+    print("请输入对应年级")
+    grade = input()
+    courseList_reqdata['courseGrade']=grade
     courseList = s.post(host+"student/elective/courseList.do",courseList_reqdata)
-    # print(courseList.content.decode('utf-8'))
+    page = courseList.content.decode('utf-8')
+    soup = BeautifulSoup(courseList.content,"html.parser",from_encoding='utf-8')
+    # for tr in soup.find_all('tr'):
+    #     if(tr.get('class')=="TABLE_TR_01"):
+    #         print(tr)
+    # print(page)
 
 #接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
 def GrabCourse(courseID,interval=0):
@@ -83,11 +93,13 @@ def GrabCourse(courseID,interval=0):
                 print("抢课成功！")
                 return
             elif tag.get('id')=="errMsg":
+                
                 if tag.string.find("已经")!=-1:
                     print("您已经抢到该课程啦~")
                     exit()
                 else:
-                    print("当前班级已满，仍在为您持续抢课")
+                    print(tag.string)
+                    # print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
         if interval!=0:
