@@ -10,16 +10,20 @@ from bs4 import BeautifulSoup
 host = "http://elite.nju.edu.cn/jiaowu/"
 user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"
 def login(session):
-    # 获取cookie
-    cookie = cookiejar.CookieJar()
-    handler = request.HTTPCookieProcessor(cookie)
-    openner = request.build_opener(handler)
-    openner.open(host) 
+    #获取cookie，如果本地有cookie，尝试使用cookie登录
+    c = GetCookie(session)
+    session.cookies.update(c)
+    if c:
+        rs = session.get("http://elite.nju.edu.cn/jiaowu/student/index.do")
+        if rs.content.__len__() > 5000:
+            print("登陆成功!")
+            return True
+        else:
+            print("登录已过期，请重新登录")
 
     #构造登陆请求体
     login_data={}
     files = os.listdir()
-    # print(files)
     if "user.cfg" in files:
         with open("user.cfg",'r') as f:
             for line in f:
@@ -32,7 +36,6 @@ def login(session):
         print("请输入密码")
         login_data['password']=input()
     login_data['retrunURL']="null"
-    # print(login_data)
 
     # 取得验证码图片
     now_time = str(int(time.time()))
@@ -57,12 +60,29 @@ def login(session):
 
     #发送登录请求
     response = session.post(host+"login.do",login_data)
-    if response.content.__len__() > 1100:
+    if response.content.__len__() > 8000:
         print("登陆成功!")
+        SaveCookie(session)         #保存此次登录的cookie
         return True
     else:
         print("登录失败，请检查账号密码及验证码")
         return False
+
+def SaveCookie(session):
+    with open(".cookie",'w') as f:
+        for key,val in session.cookies.get_dict().items():
+            f.write(key+":"+val+'\n')
+
+def GetCookie(session):
+    cookie = {}
+    if ".cookie" not in os.listdir():
+        return cookie
+    with open(".cookie",'r') as f:
+        for line in f:
+            line = line.replace('\n','').replace('\r','')
+            item = line.split(':')
+            cookie[item[0]] = item[1]
+    return cookie
 
 def GetCourseList():
     #构造拉取课程信息的请求体
@@ -87,19 +107,19 @@ def GrabCourse(courseID,interval=0):
         selectCourse_reqdata['method']="addSpecialitySelect"
         selectCourse_reqdata['classId']=str(courseID)
         selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
+        # print(selectResult.content.decode('utf-8'))
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         for tag in soup.find_all('div'):
             if tag.get('id')=="successMsg":
                 print("抢课成功！")
                 return
-            elif tag.get('id')=="errMsg":
-                
+            elif tag.get('id')=="errMsg":   
                 if tag.string.find("已经")!=-1:
                     print("您已经抢到该课程啦~")
                     exit()
                 else:
                     print(tag.string)
-                    # print("当前班级已满，仍在为您持续抢课")
+                    print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
         if interval!=0:
@@ -107,7 +127,7 @@ def GrabCourse(courseID,interval=0):
         # print(selectResult.content.decode('utf-8'))
 
 if __name__ == '__main__':
-    s = requests.session()  # 确保申请验证码的session和登陆时为一致的，所以写在了这里
+    s = requests.session()
     if not login(s):
         exit()
 
