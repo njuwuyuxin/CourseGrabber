@@ -95,7 +95,7 @@ def GetCourseList(session):
     #构造拉取课程信息的请求体
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
-    courseList_reqdata['specialityCode']=majorID      #专业代号，计科为221
+    courseList_reqdata['specialityCode']=majorID     #专业代号，计科为221
     print("请输入对应年级")
     grade = input()
     courseList_reqdata['courseGrade']=grade
@@ -115,7 +115,6 @@ def GetCourseList(session):
             courseIdList.append("")
             pass
         else:
-            # print(click_td['onclick'])
             js = click_td['onclick']
             args = js.split(',')
             courseID = args[4][0:5]
@@ -130,7 +129,6 @@ def GrabCourse(courseID,interval=0):
         selectCourse_reqdata['method']="addSpecialitySelect"
         selectCourse_reqdata['classId']=str(courseID)
         selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
-        print(selectResult.content.decode('utf-8'))
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         for tag in soup.find_all('div'):
             if tag.get('id')=="successMsg":
@@ -140,8 +138,10 @@ def GrabCourse(courseID,interval=0):
                 if tag.string.find("已经")!=-1:
                     print("您已经抢到该课程啦~")
                     exit()
+                elif tag.string.find("错误")!=-1:
+                    print("出现错误，添加失败")
+                    exit()
                 else:
-                    print(tag.string)
                     print("当前班级已满，仍在为您持续抢课")
             else:
                 pass
@@ -154,7 +154,6 @@ if __name__ == '__main__':
         exit()
 
     courseIdList = GetCourseList(s)
-    # print(courseIdList)
     print("请输入需要抢课的课程序号（非课程号）")
     courseNo = input()
     if int(courseNo)<=0 or int(courseNo)>courseIdList.__len__():
