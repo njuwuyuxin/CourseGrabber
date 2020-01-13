@@ -1,5 +1,5 @@
 import requests
-from urllib import request
+from urllib import request,error
 from http import cookiejar
 import time
 from PIL import Image
@@ -99,7 +99,15 @@ def GetCourseList(session):
     print("请输入对应年级")
     grade = input()
     courseList_reqdata['courseGrade']=grade
-    courseList = session.post(host+"student/elective/courseList.do",courseList_reqdata)
+    courseList = requests.models.Response()
+    while True:
+        try:
+            courseList = session.post(host+"student/elective/courseList.do",courseList_reqdata)
+        except requests.exceptions.ConnectionError:
+            print("连接超时，正在尝试重新连接")
+            time.sleep(1)
+        else:
+            break
     soup = BeautifulSoup(courseList.content,"html.parser",from_encoding='utf-8')
     trs = soup.find_all('tr',{'class':'TABLE_TR_01'})
     print("序号\t课程号\t\t课程名\t\t\t学分\t学时\t类型\t开课院系")
@@ -124,11 +132,24 @@ def GetCourseList(session):
 
 #接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
 def GrabCourse(courseID,interval=0):
+    connectionFailedFlag = False
     while(True):
         selectCourse_reqdata={}
         selectCourse_reqdata['method']="addSpecialitySelect"
         selectCourse_reqdata['classId']=str(courseID)
-        selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
+        selectResult = requests.models.Response()
+        while True:
+            try:
+                selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
+            except requests.exceptions.ConnectionError:
+                connectionFailedFlag=True
+                print("连接超时，正在尝试重新连接")
+                time.sleep(1)
+            else:
+                if connectionFailedFlag:
+                    connectionFailedFlag=False
+                    print("重连成功，继续为您抢课")
+                break
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         for tag in soup.find_all('div'):
             if tag.get('id')=="successMsg":
