@@ -14,7 +14,12 @@ def login(session):
     c = GetCookie(session)
     session.cookies.update(c)
     if c:
-        rs = session.get("http://elite.nju.edu.cn/jiaowu/student/index.do")
+        rs = requests.models.Response()
+        try:
+            rs = session.get("http://elite.nju.edu.cn/jiaowu/student/index.do")
+        except requests.exceptions.ConnectionError:
+            print("连接失败，请检查您的网络连接")
+            exit()
         if rs.content.__len__() > 5000:
             print("登陆成功!")
             return True
