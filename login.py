@@ -65,7 +65,7 @@ def login(session):
 
     #发送登录请求
     response = session.post(host+"login.do",login_data)
-    if response.content.__len__() > 8000:
+    if response.content.__len__() > 6000:
         print("登陆成功!")
         SaveCookie(session)         #保存此次登录的cookie
         return True
@@ -189,4 +189,4 @@ if __name__ == '__main__':
         if courseID=="":
             print("你已经选过该门课啦~换个课程吧")
         else:
-            GrabCourse(courseID,1)
+            GrabCourse(courseID,300)
