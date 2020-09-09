@@ -175,27 +175,27 @@ def GrabSpecialCourse(courseID,interval=0):
                 selectResult = s.post(host+'student/elective/selectCourse.do',selectCourse_reqdata)
             except requests.exceptions.ConnectionError:
                 connectionFailedFlag=True
-                print("连接超时，正在尝试重新连接")
+                print(GetTime()+"- 连接超时，正在尝试重新连接")
                 time.sleep(1)
             else:
                 if connectionFailedFlag:
                     connectionFailedFlag=False
-                    print("重连成功，继续为您抢课")
+                    print(GetTime()+"- 重连成功，继续为您抢课")
                 break
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         for tag in soup.find_all('div'):
             if tag.get('id')=="successMsg":
-                print("抢课成功！")
+                print(GetTime()+"- 抢课成功！")
                 return
             elif tag.get('id')=="errMsg":   
                 if tag.string.find("已经")!=-1:
-                    print("您已经抢到该课程啦~")
+                    print(GetTime()+"- 您已经抢到该课程啦~")
                     exit()
                 elif tag.string.find("错误")!=-1:
-                    print("出现错误，添加失败")
+                    print(GetTime()+"- 出现错误，添加失败")
                     exit()
                 else:
-                    print("当前班级已满，仍在为您持续抢课")
+                    print(GetTime()+"- 当前班级已满，仍在为您持续抢课")
             else:
                 pass
         if interval!=0:
@@ -211,35 +211,37 @@ def GrabDiscussRenewCourse(courseID,interval=0):
                 selectResult = s.get(host+'student/elective/courseList.do?method=submitDiscussRenew&classId='+str(courseID)+'&campus=%E4%BB%99%E6%9E%97%E6%A0%A1%E5%8C%BA')
             except requests.exceptions.ConnectionError:
                 connectionFailedFlag=True
-                print("连接超时，正在尝试重新连接")
+                print(GetTime()+"- 连接超时，正在尝试重新连接")
                 time.sleep(1)
             else:
                 if connectionFailedFlag:
                     connectionFailedFlag=False
-                    print("重连成功，继续为您抢课")
+                    print(GetTime()+"- 重连成功，继续为您抢课")
                 break
         soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
         script = soup.find_all('script')[1]
         # print(str(script))
         if re.search("班级已满",str(script)) is not None:
-            print("当前班级已满，仍在为您持续抢课")
-        elif re.search("你已经选过这个班级了",str(script)) is not None:
-            print("添加失败，你已经选过这个班级了")
+            print(GetTime()+"- 当前班级已满，仍在为您持续抢课")
+        elif re.search("-你已经选过这个班级了",str(script)) is not None:
+            print(GetTime()+"- 添加失败，你已经选过这个班级了")
             exit()
         elif re.search("操作成功",str(script)) is not None:
-            print("抢课成功！课程存在时间冲突，已自动生成免修不免考申请")
+            print(GetTime()+"- 抢课成功！课程存在时间冲突，已自动生成免修不免考申请")
             exit()
         elif re.search("课程选择成功",str(script)) is not None:
-            print("抢课成功！")
+            print(GetTime()+"- 抢课成功！")
             exit()
         if interval!=0:
             time.sleep(interval)
+
+def GetTime():
+    return time.asctime(time.localtime(time.time()))[11:20]
 
 if __name__ == '__main__':
     s = requests.session()
     if not login(s):
         exit()
-
     print("请选择课程类型：")
     print("1.通识课 2.公选课 3.专业课")
     courseType = input()
