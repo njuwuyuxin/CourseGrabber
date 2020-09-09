@@ -5,6 +5,7 @@ import time
 from PIL import Image
 from io import BytesIO
 import os
+import re
 from bs4 import BeautifulSoup
 
 host = "http://elite.nju.edu.cn/jiaowu/"
@@ -89,7 +90,8 @@ def GetCookie(session):
             cookie[item[0]] = item[1]
     return cookie
 
-def GetCourseList(session):
+#拉取专业课课表
+def GetSpecialCourseList(session):
     #获取专业选课页面，用以获得院系编号
     selectPage = session.post(host+"student/elective/courseList.do",{'method':'specialityCourseList'})
     selectPageSoup = BeautifulSoup(selectPage.content,"html.parser",from_encoding='utf-8')
@@ -101,7 +103,7 @@ def GetCourseList(session):
     courseList_reqdata={}
     courseList_reqdata['method']="specialityCourseList"
     courseList_reqdata['specialityCode']=majorID     #专业代号，计科为221
-    print("请输入对应年级")
+    print("请输入对应年级(如2019)")
     grade = input()
     courseList_reqdata['courseGrade']=grade
     courseList = requests.models.Response()
@@ -134,9 +136,34 @@ def GetCourseList(session):
             courseIdList.append(courseID)
     return courseIdList
 
+#拉取通识课课表
+def GetDiscussRenewCourseList(session):
+    selectPage = session.get(host+"student/elective/courseList.do?method=discussRenewCourseList&campus=%E4%BB%99%E6%9E%97%E6%A0%A1%E5%8C%BA")
+    soup = BeautifulSoup(selectPage.content,"html.parser",from_encoding='utf-8')
+
+    #返回的课程列表，存储课程编号对应的courseID
+    courseIdList = []
+    trs = soup.find_all('tr',re.compile('TABLE_TR_0[12]'))
+    print("序号\t课程号\t\t课程名\t\t\t\t\t\t学分\t限额\t已选")
+    for tr in trs:
+        tds = tr.find_all('td')
+        courseNo = tds[0].find('a').find('u').string
+        if(tds[2].string.__len__()<=7):
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[2].string+'\t\t\t\t\t'+tds[3].string+'\t'+tds[6].string+'\t'+tds[7].string)
+        elif(tds[2].string.__len__()<=11):
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[2].string+'\t\t\t\t'+tds[3].string+'\t'+tds[6].string+'\t'+tds[7].string)
+        elif(tds[2].string.__len__()<=15):
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[2].string+'\t\t\t'+tds[3].string+'\t'+tds[6].string+'\t'+tds[7].string)
+        else:
+            print(str(trs.index(tr)+1)+'\t'+courseNo+'\t'+tds[2].string+'\t\t'+tds[3].string+'\t'+tds[6].string+'\t'+tds[7].string)
+        arg1 = tds[0].find('a')['href'].split('(')
+        arg2 = arg1[1].split(',')
+        courseIdList.append(arg2[0])
+    return courseIdList
+
 
 #接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
-def GrabCourse(courseID,interval=0):
+def GrabSpecialCourse(courseID,interval=0):
     connectionFailedFlag = False
     while(True):
         selectCourse_reqdata={}
@@ -174,12 +201,59 @@ def GrabCourse(courseID,interval=0):
         if interval!=0:
             time.sleep(interval)
 
+#接受两个参数，第一个为课程ID，第二个为每次抢课时间间隔
+def GrabDiscussRenewCourse(courseID,interval=0):
+    connectionFailedFlag = False
+    while(True):
+        selectResult = requests.models.Response()
+        while True:
+            try:
+                selectResult = s.get(host+'student/elective/courseList.do?method=submitDiscussRenew&classId='+str(courseID)+'&campus=%E4%BB%99%E6%9E%97%E6%A0%A1%E5%8C%BA')
+            except requests.exceptions.ConnectionError:
+                connectionFailedFlag=True
+                print("连接超时，正在尝试重新连接")
+                time.sleep(1)
+            else:
+                if connectionFailedFlag:
+                    connectionFailedFlag=False
+                    print("重连成功，继续为您抢课")
+                break
+        soup = BeautifulSoup(selectResult.content,"html.parser",from_encoding='utf-8')
+        script = soup.find_all('script')[1]
+        # print(str(script))
+        if re.search("班级已满",str(script)) is not None:
+            print("当前班级已满，仍在为您持续抢课")
+        elif re.search("你已经选过这个班级了",str(script)) is not None:
+            print("添加失败，你已经选过这个班级了")
+            exit()
+        elif re.search("操作成功",str(script)) is not None:
+            print("抢课成功！课程存在时间冲突，已自动生成免修不免考申请")
+            exit()
+        elif re.search("课程选择成功",str(script)) is not None:
+            print("抢课成功！")
+            exit()
+        if interval!=0:
+            time.sleep(interval)
+
 if __name__ == '__main__':
     s = requests.session()
     if not login(s):
         exit()
 
-    courseIdList = GetCourseList(s)
+    print("请选择课程类型：")
+    print("1.通识课 2.公选课 3.专业课")
+    courseType = input()
+    courseIdList = []
+    if int(courseType) == 1:
+        courseIdList = GetDiscussRenewCourseList(s)
+    elif int(courseType) == 2:
+        courseIdList = GetSpecialCourseList(s)
+    elif int(courseType) == 3:
+        courseIdList = GetSpecialCourseList(s)
+    else:
+        print("课程类型输入有误")
+        exit()
+
     print("请输入需要抢课的课程序号（非课程号）")
     courseNo = input()
     if int(courseNo)<=0 or int(courseNo)>courseIdList.__len__():
@@ -189,4 +263,9 @@ if __name__ == '__main__':
         if courseID=="":
             print("你已经选过该门课啦~换个课程吧")
         else:
-            GrabCourse(courseID,300)
+            if int(courseType) == 1:
+                GrabDiscussRenewCourse(courseID,3)
+            if int(courseType) == 2:
+                GrabSpecialCourse(courseID,300)
+            if int(courseType) == 3:
+                GrabSpecialCourse(courseID,300)
